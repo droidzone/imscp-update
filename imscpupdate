@@ -1,0 +1,47 @@
+#!/usr/bin/perl
+use strict;
+use warnings;
+use LWP::Simple;
+use HTML::TreeBuilder;
+
+#Get imscp versions webpage
+my $file_name='/tmp/imscpversion.html';
+my $status = getstore('https://github.com/i-MSCP/imscp/releases', $file_name);
+unless (is_success($status)) {
+  die "An error has occured! Status code: $status\n";
+}
+
+#Scan html tags and locate latest version number
+my $tree = HTML::TreeBuilder->new;
+$tree->parse_file($file_name);
+my @spans = $tree->look_down(class => 'css-truncate-target');
+my $curversion=$spans[0]->as_trimmed_text();
+print "\nLatest i-mscp version:".$curversion."\n";
+$tree->delete();
+# chdir "/usr/local/src";
+chdir "/tmp";
+
+# my $output = qx|ls -l|;
+# print $output;
+
+
+use Cwd;
+my $dir = getcwd;
+print "Curr: $dir\n";
+my $output = qx|rm -fR imscp|;
+print "Removing old temp files..\n$output";
+
+my $mycmd="wget -N https://github.com/i-MSCP/imscp/archive/".$curversion.".tar.gz";
+print $mycmd."\n";
+
+$output = qx|$mycmd|;
+print $output;
+my $filename=$curversion.".tar.gz";
+
+$mycmd="tar xzf ".$filename;
+print $mycmd."\n";
+$output = qx|$mycmd|;
+print $output;
+
+chdir "imscp-".$curversion;
+system($^X, "imscp-autoinstall", "-d");
